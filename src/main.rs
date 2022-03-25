@@ -1,26 +1,27 @@
-use sqlx::FromRow;
+use rand::Rng;
 
-#[derive(FromRow, Debug)]
-struct Person {
-    name: String,
-    age: u8,
-}
+mod user;
 
 #[tokio::main]
-async fn main() -> Result<(), sqlx::Error> {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    //  for SQLite, use SqlitePoolOptions::new()
 
-    let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite://data.db").await?;
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect("sqlite://data.db")
+        .await?;
 
-    let p = Person {
-        name: String::from("John"),
-        age: 42,
-    };
+    let mut rng = rand::thread_rng();
 
-    let rows: Vec<Person> = sqlx::query_as!(Person, r#"SELECT name, age FROM person;"#)
-        .fetch_all(&pool).await?;
+    let user = user::User::new(String::from("rand person1"), rng.gen());
 
-    for row in rows {
-        println!("{row:?}");
+    let store = user::SQLiteUserStore::new(pool);
+
+    store.create_user(user).await?;
+
+    let users = store.get_users().await?;
+
+    for user in users {
+        println!("{user:?}");
     }
     Ok(())
 }
