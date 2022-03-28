@@ -1,6 +1,7 @@
+use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Pool, Sqlite};
 
-#[derive(FromRow, Debug)]
+#[derive(FromRow, Debug, Serialize, Deserialize, Clone)]
 pub struct User {
     pub id: uuid::Uuid,
     pub name: String,
@@ -57,5 +58,17 @@ impl SQLiteUserStore {
         )
         .fetch_one(&self.pool)
         .await?)
+    }
+
+    pub async fn delete_user(&self, id: uuid::Uuid) -> Result<(), Box<dyn std::error::Error>> {
+        // Make a simple query to return the given parameter (use a question mark `?` instead of `$1` for MySQL)
+        sqlx::query!(
+            r#"DELETE FROM user WHERE id = ?;"#,
+            id,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
     }
 }
